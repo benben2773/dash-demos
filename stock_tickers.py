@@ -1,6 +1,7 @@
 from dash.react import Dash
 import dash_html_components as html
 import dash_core_components
+import os
 import pandas as pd
 import pandas_datareader.data as web
 import datetime as dt
@@ -72,5 +73,6 @@ def update_graph(stock_ticker_input):
         }
     }
 
+
 if __name__ == '__main__':
-    dash.run_server()
+    dash.run_server(port=int(os.environ.get('PORT', 5000)))
