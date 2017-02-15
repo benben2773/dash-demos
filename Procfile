@@ -1,1 +1,1 @@
-web: gunicorn stock_tickers:server
+web: gunicorn stock_tickers:server --log-file=-
