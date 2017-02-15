@@ -15,6 +15,7 @@ dash.component_suites = [
     'dash_core_components'
 ]
 
+print('test')
 
 dash.layout = html.Div([
     html.Link(
