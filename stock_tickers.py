@@ -93,20 +93,24 @@ world_bank_layout = html.Div([
 
     html.Hr(),
 
-    html.Div([
-        html.Div([Graph(id='choropleth')], className="eight columns"),
-        html.Div(id='table',
-                 style={'height': '450px', 'overflowY': 'scroll'},
-                 className="four columns"),
-    ], className="row"),
-
-    html.Div([Slider(id='year-slider')],
-        style={'margin': 25}
-    ),
-
     Dropdown(id='indicator-dropdown-single',
              options=options,
              value='GDP growth (annual %)'),
+
+    html.Div([
+        html.Div([
+            Graph(id='choropleth'),
+            Graph(id='indicator-over-time'),
+        ], className="eight columns"),
+
+        html.Div([Slider(id='year-slider')],
+            style={'marginTop': 25, 'marginBottom': 25}
+        ),
+
+        html.Div(id='table',
+                 style={'height': '850px', 'overflowY': 'scroll'},
+                 className="four columns"),
+    ], className="row"),
 
     html.Hr(),
 
@@ -253,6 +257,49 @@ def update_table(indicator_dropdown, year_slider):
         ]) for country, value in zip(countries, values)]
     )}
 
+@dash.react('indicator-over-time',
+            events=[
+                {'id': 'choropleth', 'event': 'hover'},
+                {'id': 'indicator-dropdown-single', 'event': 'propChange'}
+            ],
+            state=[
+                {'id': 'choropleth', 'prop': 'hoverData'},
+                {'id': 'indicator-dropdown-single', 'prop': 'value'}
+            ])
+def graph_country_data(eventData, indicator):
+    if 'points' in eventData:
+        country_code = eventData['points'][0]['location']
+    else:
+        country_code = 'USA'
+
+    fdf = df[(df['Indicator Name'] == indicator) &
+             (df['Country Code'] == country_code)]
+    country_name = fdf['Country Name'].irow(0)
+    x = fdf.ix[:, '1960':].columns
+    y = fdf.ix[:, '1960':].irow(0)
+
+    return {
+        'figure': {
+            'data': [{
+                'x': x,
+                'y': y,
+                'mode': 'markers+lines',
+                'marker': {'size': 8},
+                'line': {'width': 2}
+            }],
+            'layout': {
+                'margin': {'l': 20, 'r': 0, 't': 0, 'b': 40},
+                'yaxis': {'showgrid': None},
+                'xaxis': {'showgrid': None},
+                'annotations': [{
+                    'x': 0, 'y': 1,
+                    'text': '{} over time in {}'.format(indicator, country_name),
+                    'xref': 'paper', 'yref': 'paper',
+                    'font': {'size': 16}, 'showarrow': False
+                }]
+            }
+        }
+    }
 
 # Stock Tickers Example
 symbols = finsymbols.get_sp500_symbols()
@@ -263,7 +310,7 @@ stock_ticker_layout = html.Div([
             Dropdown(
                 id='stock-ticker-input',
                 options=[{'label': s['company'], 'value': s['symbol']} for s in symbols],
-                value='YHOO',
+                value=['YHOO'],
                 multi=True
             )
         ], className="two columns"),
@@ -316,7 +363,7 @@ def update_graph(stock_ticker_input):
         bollinger_traces = [{
             'x': df.index, 'y': y,
             'type': 'scatter', 'mode': 'lines',
-            'line': {'width': 1, 'color': '#ccc'},
+            'line': {'width': 1, 'color': colorscale[(i*2) % len(colorscale)]},
             'hoverinfo': 'none',
             'legendgroup': ticker,
             'showlegend': True if i == 0 else False,
@@ -337,7 +384,7 @@ def update_graph(stock_ticker_input):
 
 dash.layout = html.Div([
     header, world_bank_layout, stock_ticker_layout
-])
+], style={'marginLeft': 20, 'marginRight': 20})
 
 if __name__ == '__main__':
     dash.server.run(debug=True)
