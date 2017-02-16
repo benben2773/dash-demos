@@ -1,5 +1,6 @@
 from dash.react import Dash
 from flask import Flask
+import finsymbols
 import colorlover as cl
 from dash_core_components import Graph, Dropdown, Input, Slider
 import dash_html_components as html
@@ -87,23 +88,22 @@ for k, v in indicators.iteritems():
         options.append({'label': i, 'value': i})
 
 world_bank_layout = html.Div([
-    html.H1('World Bank Development Indicators'),
-
-    html.Div('''
-        This web application is written in Plotly's Dash framework.
-        Dash is a Python abstraction around Javascript and HTML.
-        Altogether, this app was written in 300 lines.
-    '''),
+    html.H2('Market Indicators'),
+    html.H4('Dash Developer Preview App'),
 
     html.Hr(),
 
     html.Div([
         html.Div([Graph(id='choropleth')], className="eight columns"),
         html.Div(id='table',
-                 style={'height': '400px', 'overflowY': 'scroll'},
+                 style={'height': '450px', 'overflowY': 'scroll'},
                  className="four columns"),
     ], className="row"),
-    html.Div([Slider(id='year-slider')], style={'margin': 25}),
+
+    html.Div([Slider(id='year-slider')],
+        style={'margin': 25}
+    ),
+
     Dropdown(id='indicator-dropdown-single',
              options=options,
              value='GDP growth (annual %)'),
@@ -113,28 +113,34 @@ world_bank_layout = html.Div([
     html.H3('Indicators over Time'),
 
     html.Div([
-        html.Label('Indicator'),
-        Dropdown(
-            id='indicator-dropdown',
-            options=options,
-            multi=True,
-            value=[
-                'Exports of goods and services (% of GDP)',
-                'Imports of goods and services (% of GDP)'
-            ]
-        ),
+        html.Div([
+            html.Label('Indicator'),
+            Dropdown(
+                id='indicator-dropdown',
+                options=options,
+                multi=True,
+                value=[
+                    'Exports of goods and services (% of GDP)',
+                    'Imports of goods and services (% of GDP)'
+                ]
+            ),
 
-        html.Label('Region'),
-        Dropdown(
-            id='region-dropdown',
-            options=[{'label': i, 'value': i}
-                     for i in list(df['Country Name'].unique())],
-            multi=True,
-            value=['Kuwait', 'United States', 'United Kingdom']
-        )
-    ]),
+            html.Label('Region'),
+            Dropdown(
+                id='region-dropdown',
+                options=[{'label': i, 'value': i}
+                         for i in list(df['Country Name'].unique())],
+                multi=True,
+                value=['Kuwait', 'United States', 'United Kingdom']
+            )
+        ], className="three columns"),
 
-    Graph(id='indicator-time-series'),
+        html.Div([
+            Graph(id='indicator-time-series'),
+        ], className="nine columns")
+
+
+    ], className="row"),
 
     html.Hr(),
 ])
@@ -249,23 +255,23 @@ def update_table(indicator_dropdown, year_slider):
 
 
 # Stock Tickers Example
+symbols = finsymbols.get_sp500_symbols()
 stock_ticker_layout = html.Div([
-    html.H1('Yahoo Finance Stock Tickers', id='h1'),
-    Input(
-        id='stock-ticker-input',
-        placeholder='COKE',
-        style={
-            'fontSize': '1.5em',
-            'fontWeight': 200,
-            'border': 'none',
-            'borderBottom': 'thin solid lightblue'
-        },
-        value='AAPL',
-    ),
-    Graph(
-        id='my-graph',
-        figure={}
-    )
+    html.H3('S&P 500', id='h1'),
+    html.Div([
+        html.Div([
+            Dropdown(
+                id='stock-ticker-input',
+                options=[{'label': s['company'], 'value': s['symbol']} for s in symbols],
+                value='YHOO',
+                multi=True
+            )
+        ], className="two columns"),
+
+        html.Div([Graph(id='s&p-graph')], className="ten columns")
+
+    ], className="row")
+
 ])
 
 
@@ -274,27 +280,55 @@ df_companies = pd.read_csv('https://raw.githubusercontent.com/'
                            'plotly/dash/master/companylist.csv')
 tickers = [s.lower() for s in list(df_companies['Symbol'])]
 
+def bbands(price, window_size=10, num_of_std=5):
+    rolling_mean = price.rolling(window=window_size).mean()
+    rolling_std  = price.rolling(window=window_size).std()
+    upper_band = rolling_mean + (rolling_std*num_of_std)
+    lower_band = rolling_mean - (rolling_std*num_of_std)
+    return rolling_mean, upper_band, lower_band
 
-@dash.react('my-graph', ['stock-ticker-input'])
+@dash.react('s&p-graph', ['stock-ticker-input'])
 def update_graph(stock_ticker_input):
     """ This function is called whenever the input
     'stock-ticker-input' changes.
     Query yahoo finance with the ticker input and update the graph
     'graph' with the result.
     """
-    ticker = stock_ticker_input['value'].lower()
-    if ticker not in tickers:
-        raise Exception
-    df = web.DataReader(ticker, 'yahoo', dt.datetime(2014, 1, 1),
-                        dt.datetime(2015, 4, 15))
+    tickers = stock_ticker_input['value']
+    traces = []
+    for i, ticker in enumerate(tickers):
+        df = web.DataReader(ticker, 'yahoo',
+                            dt.datetime(2016, 6, 1),
+                            dt.datetime(2017, 2, 15))
+        candlestick = {
+            'x': df.index,
+            'open': df['Open'],
+            'high': df['High'],
+            'low': df['Low'],
+            'close': df['Close'],
+            'type': 'candlestick',
+            'name': ticker,
+            'legendgroup': ticker,
+            'increasing': {'line': {'color': colorscale[(i*2) % len(colorscale)]}},
+            'decreasing': {'line': {'color': colorscale[(i*2 + 1) % len(colorscale)]}}
+        }
+        bb_bands = bbands(df.Close)
+        bollinger_traces = [{
+            'x': df.index, 'y': y,
+            'type': 'scatter', 'mode': 'lines',
+            'line': {'width': 1, 'color': '#ccc'},
+            'hoverinfo': 'none',
+            'legendgroup': ticker,
+            'showlegend': True if i == 0 else False,
+            'name': '{} - bollinger bands'.format(ticker)
+        } for i, y in enumerate(bb_bands)]
+        traces.append(candlestick)
+        traces.extend(bollinger_traces)
+
     return {
         'figure': {
-            'data': [{
-                'x': df.index,
-                'y': df['Close']
-            }],
+            'data': traces,
             'layout': {
-                'yaxis': {'title': 'Close'},
                 'margin': {'b': 50, 'r': 10, 'l': 60, 't': 0}
             }
         }
