@@ -8,3 +8,10 @@ Simple demos to help you get started with Dash. Dash is the "R Shiny of Python" 
 * [Code for stock and global indicators example at dash.plot.ly](https://github.com/plotly/dash-demos/blob/master/stock_tickers.py)
 
 ![](http://moderndata.plot.ly/wp-content/uploads/2017/02/hover.gif)
+
+***
+
+Installation
+```
+$ pip install dash.ly dash_core_components dash_html_components dash_renderer plotly
+```
