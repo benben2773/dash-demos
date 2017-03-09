@@ -16,27 +16,12 @@ import traceback
 
 server = Flask(__name__)
 dash = Dash(__name__, server=server)
-dash.component_suites = [
-    'dash_html_components',
-    'dash_core_components'
-]
-
-header = html.Div([
-    html.Link(
-        rel="stylesheet",
-        href="https://cdnjs.cloudflare.com/ajax/libs/skeleton"
-             "/2.0.4/skeleton.min.css"
-    ),
-    html.Link(
-        rel="stylesheet",
-        href="https://unpkg.com/react-select@1.0.0-rc.3/dist/react-select.css"
-    ),
-    html.Link(
-        rel="stylesheet",
-        href="https://cdn.rawgit.com/chriddyp/abcbc02565dd495b676c3269240e09ca"
-             "/raw/816de7d5c5d5626e3f3cac8e967070aa15da77e2/rc-slider.css"
+dash.css.append_css({
+    'external_url': (
+        "https://cdnjs.cloudflare.com/ajax/libs/skeleton"
+        "/2.0.4/skeleton.min.css"
     )
-])
+})
 
 # World Bank Example
 colorscale = cl.scales['9']['qual']['Paired']
@@ -383,7 +368,7 @@ def update_graph(stock_ticker_input):
 
 
 dash.layout = html.Div([
-    header, world_bank_layout, stock_ticker_layout
+    world_bank_layout, stock_ticker_layout
 ], style={'marginLeft': 20, 'marginRight': 20})
 
 if __name__ == '__main__':
