@@ -371,5 +371,6 @@ dash.layout = html.Div([
     world_bank_layout, stock_ticker_layout
 ], style={'marginLeft': 20, 'marginRight': 20})
 
+dash._setup_server()
 if __name__ == '__main__':
     dash.server.run(debug=True)
